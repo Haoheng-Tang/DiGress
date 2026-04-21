@@ -16,7 +16,9 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
 ### Runpod Setup
 
   - Download anaconda/miniconda
+
   ```cd /workspace```
+
   ```wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh```
 
   - Run the Installation Script
@@ -45,7 +47,8 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
   `cd DiGress`
 
   - Relink your existing installation after restart/migration
-  `/workspace/miniconda3/bin/conda init bash && source ~/.bashrc`
+
+  ```/workspace/miniconda3/bin/conda init bash && source ~/.bashrc```
 
   ### Python Setup
 
