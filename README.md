@@ -24,7 +24,7 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
 
   - Execute the script:```bash Miniconda3-latest-Linux-x86_64.sh```
   Review the license agreement (press Enter and then type `yes`).
-  Crucial Step: When prompted for the installation location, it will default to /root/miniconda3. Do not press enter. Instead, type:`/workspace/miniconda3`
+  Crucial Step: When prompted for the installation location, it will default to `/root/miniconda3`. Do not press `enter`. Instead, type:`/workspace/miniconda3`.
   When asked if you want to initialize Miniconda by running conda init, type `yes`.
 
   - Apply Changes
