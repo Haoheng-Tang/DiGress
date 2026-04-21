@@ -17,9 +17,9 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
 
   - Download anaconda/miniconda
 
-  ```cd /workspace```
+    ```cd /workspace```
 
-  ```wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh```
+    ```wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh```
 
   - Run the Installation Script
   When running the script, you must manually specify the installation path.
@@ -33,29 +33,33 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
   For the changes to take effect in your current terminal session, source your bash configuration: `source ~/.bashrc`
 
   - Verify and Clean Up
-  Confirm that the installation is correctly mapped to the volume and remove the installer script to save space.
-  `which conda`  Should return `/workspace/miniconda3/bin/conda`
-  Also, remove the installer
+  Confirm that the installation is correctly mapped to the volume and remove the installer script to save space:
+  `which conda`  
+  Should return `/workspace/miniconda3/bin/conda`
+
+    Also, remove the installer
   `rm Miniconda3-latest-Linux-x86_64.sh`
 
   - Set Up an Organized Directory Structure
-  `mkdir -p /workspace/projects`
+  
+    `mkdir -p /workspace/projects`
 
   - Clone via HTTPS
-  ```cd /workspace/projects```
-  ```git clone https://github.com/cvignac/DiGress.git```
-  `cd DiGress`
 
-  - Relink your existing installation after restart/migration
+    ```cd /workspace/projects```
+    ```git clone https://github.com/cvignac/DiGress.git```
+    `cd DiGress`
 
-  ```/workspace/miniconda3/bin/conda init bash && source ~/.bashrc```
+  - Relink your existing installation after restart/migration:
+
+    ```/workspace/miniconda3/bin/conda init bash && source ~/.bashrc```
 
   ### Python Setup
 
   - Create a rdkit environment that directly contains rdkit:
     
     ```conda create -c conda-forge -n digress rdkit=2023.03.2 python=3.9```
-  - `conda activate digress`
+    `conda activate digress`
   - Check that this line does not return an error:
     
     ``` python3 -c 'from rdkit import Chem' ```
@@ -99,7 +103,7 @@ Note: graph_tool and torch_geometric currently seem to conflict on MacOS, I have
 ## Run the code
   
   - All code is currently launched through `python3 main.py`. Check hydra documentation (https://hydra.cc/) for overriding default parameters.
-  - To run the debugging code: `python3 main.py +experiment=debug.yaml`. We advise to try to run the debug mode first
+  - To run the debugging code: `python3 src/main.py +experiment=debug.yaml`. We advise to try to run the debug mode first
     before launching full experiments.
   - To run a code on only a few batches: `python3 main.py general.name=test`.
   - To run the continuous model: `python3 main.py model=continuous`
