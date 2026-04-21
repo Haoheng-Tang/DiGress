@@ -10,10 +10,45 @@ All datasets should now download automatically
 network layers have been fixed. The `fixed_bug` branch has not been evaluated, but should normally perform better.
 If you train the `fixed_bug` branch on datasets provided in this code, we would be happy to know the results.
 
-## Environment installation
+## Environment installation on Ubuntu (Runpod Pods)
 This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
 
-  - Download anaconda/miniconda if needed
+### Runpod Setup
+
+  - Download anaconda/miniconda
+  ```cd /workspace```
+  ```wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh```
+
+  - Run the Installation Script
+  When running the script, you must manually specify the installation path.
+
+  - Execute the script:```bash Miniconda3-latest-Linux-x86_64.sh```
+  Review the license agreement (press Enter and then type `yes`).
+  Crucial Step: When prompted for the installation location, it will default to /root/miniconda3. Do not press enter. Instead, type:`/workspace/miniconda3`
+  When asked if you want to initialize Miniconda by running conda init, type `yes`.
+
+  - Apply Changes
+  For the changes to take effect in your current terminal session, source your bash configuration: `source ~/.bashrc`
+
+  - Verify and Clean Up
+  Confirm that the installation is correctly mapped to the volume and remove the installer script to save space.
+  `which conda`  Should return `/workspace/miniconda3/bin/conda`
+  Also, remove the installer
+  `rm Miniconda3-latest-Linux-x86_64.sh`
+
+  - Set Up an Organized Directory Structure
+  `mkdir -p /workspace/projects`
+
+  - Clone via HTTPS
+  ```cd /workspace/projects```
+  ```git clone https://github.com/cvignac/DiGress.git```
+  `cd DiGress`
+
+  - Relink your existing installation after restart/migration
+  `/workspace/miniconda3/bin/conda init bash && source ~/.bashrc`
+
+  ### Python Setup
+
   - Create a rdkit environment that directly contains rdkit:
     
     ```conda create -c conda-forge -n digress rdkit=2023.03.2 python=3.9```
@@ -30,9 +65,20 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
   - Install the nvcc drivers for your cuda version. For example:
     
     ```conda install -c "nvidia/label/cuda-11.8.0" cuda```
+
+  - Uninstall the current pytorch: 
+    
+    ```pip uninstall torch torchvision torchaudio -y```
+    ```pip uninstall torch-geometric -y```
+
   - Install a corresponding version of pytorch, for example: 
     
     ```pip3 install torch==2.0.1 --index-url https://download.pytorch.org/whl/cu118```
+
+  - Install a compatible version of PyG, for example: 
+    
+    ```pip install torch-geometric==2.3.1```
+    
   - Install other packages using the requirement file: 
     
     ```pip install -r requirements.txt```
