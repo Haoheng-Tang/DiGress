@@ -100,6 +100,38 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
 
 Note: graph_tool and torch_geometric currently seem to conflict on MacOS, I have not solved this issue yet.
 
+### Git Commit
+
+  - Use a Personal Access Token (PAT)
+  
+    Go to your GitHub Settings > Developer Settings > Personal Access Tokens > Tokens (classic).
+    Generate a new token with repo permissions. Allow: 
+    
+    `Permissions Category: Repository permissions`
+
+    `Permission Name: Contents`
+
+    `Level: Read and write`
+    When you run git push, and it asks for your password, paste the token instead.
+
+  - Configure your Identity
+
+    ```git config --global user.email "your_email@example.com"```
+    ```git config --global user.name "Your Name"```
+
+  - Stage and Commit your changes
+
+    ```git add src/datasets/inpatient_dataset.py```
+    ```git commit -m "Add inpatient_dataset.py to /datasets/"```
+
+  - Update the Remote URL with your Token
+
+    ```git remote set-url origin https://<digress-runpod-access-token>@github.com/Haoheng-Tang/DiGress.git```
+
+  - Push to Main
+    ```git push origin main```
+
+
 ## Run the code
   
   - All code is currently launched through `python3 main.py`. Check hydra documentation (https://hydra.cc/) for overriding default parameters.
