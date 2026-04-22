@@ -145,7 +145,8 @@ class InpatientDatasetInfos(AbstractDatasetInfos):
         self.datamodule = datamodule
         self.name = 'nx_graphs'
         self.n_nodes = self.datamodule.node_counts()
-        self.node_types = torch.tensor([1])               # There are no node types
+        # Node features are one-hot encoded from room/category names in raw JSON files.
+        self.node_types = self.datamodule.node_types()
         self.edge_types = self.datamodule.edge_counts()
         super().complete_infos(self.n_nodes, self.node_types)
 
