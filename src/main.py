@@ -69,12 +69,16 @@ def get_resume_adaptive(cfg, model_kwargs):
 def main(cfg: DictConfig):
     dataset_config = cfg["dataset"]
 
-    if dataset_config["name"] in ['sbm', 'comm20', 'planar']:
+    if dataset_config["name"] in ['sbm', 'comm20', 'planar', 'inpatient']:
         from datasets.spectre_dataset import SpectreGraphDataModule, SpectreDatasetInfos
         from analysis.spectre_utils import PlanarSamplingMetrics, SBMSamplingMetrics, Comm20SamplingMetrics
         from analysis.visualization import NonMolecularVisualization
+        from datasets.inpatient_dataset import InpatientGraphDataModule, InpatientDatasetInfos
 
-        datamodule = SpectreGraphDataModule(cfg)
+        if dataset_config["name"] == "inpatient":
+            datamodule = InpatientGraphDataModule(cfg)
+        else:
+            datamodule = SpectreGraphDataModule(cfg)
         if dataset_config['name'] == 'sbm':
             sampling_metrics = SBMSamplingMetrics(datamodule)
         elif dataset_config['name'] == 'comm20':
@@ -82,7 +86,10 @@ def main(cfg: DictConfig):
         else:
             sampling_metrics = PlanarSamplingMetrics(datamodule)
 
-        dataset_infos = SpectreDatasetInfos(datamodule, dataset_config)
+        if dataset_config["name"] == "inpatient":
+            dataset_infos = InpatientDatasetInfos(datamodule, dataset_config)
+        else:
+            dataset_infos = SpectreDatasetInfos(datamodule, dataset_config)
         train_metrics = TrainAbstractMetricsDiscrete() if cfg.model.type == 'discrete' else TrainAbstractMetrics()
         visualization_tools = NonMolecularVisualization()
 
