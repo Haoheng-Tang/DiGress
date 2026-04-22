@@ -190,6 +190,204 @@ The node counts and the distribution of node types and edge types can be compute
 
 Once the dataset file is written, the code in main.py can be adapted to handle the new dataset, and a new file can be added in `configs/dataset`.
 
+### 1. Put your raw data in the project
+Inside the repo root, create a data folder (if not already there):
+```
+DiGress/
+├── data/
+│   └── my_dataset/
+│       ├── raw/
+│       └── processed/   # will be auto-created
+```
+Put your original files (CSV, JSON, NPZ, SMILES, edge lists, etc.) inside: `data/my_dataset/raw/`
+
+### 2. Create a dataset file
+Create a new file, for example: 
+
+`src/datasets/my_dataset.py`
+
+### 3. Implement the Dataset class (PyG style)
+
+Base it on:
+- `moses_dataset.py` → for molecules
+- `spectre_datasets.py` → for general graphs
+
+Minimal Structure:
+```
+import os
+import torch
+from torch_geometric.data import InMemoryDataset, Data
+
+class MyDataset(InMemoryDataset):
+    def __init__(self, root, transform=None, pre_transform=None):
+        super().__init__(root, transform, pre_transform)
+        self.data, self.slices = torch.load(self.processed_paths[0])
+
+    @property
+    def raw_file_names(self):
+        return ['data.csv']  # change to your file
+
+    @property
+    def processed_file_names(self):
+        return ['data.pt']
+
+    def download(self):
+        # Not needed if data is local
+        pass
+
+    def process(self):
+        data_list = []
+
+        # ---- LOAD YOUR RAW DATA ----
+        # Example: replace with your own logic
+        import pandas as pd
+        df = pd.read_csv(self.raw_paths[0])
+
+        for i in range(len(df)):
+            # Build graph
+            edge_index = ...  # tensor shape [2, num_edges]
+            x = ...           # node features
+            edge_attr = ...   # optional
+
+            data = Data(
+                x=x,
+                edge_index=edge_index,
+                edge_attr=edge_attr
+            )
+
+            data_list.append(data)
+
+        # Optional transforms
+        if self.pre_transform is not None:
+            data_list = [self.pre_transform(d) for d in data_list]
+
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
+```
+
+### 4. Create DatasetInfos class
+This is critical for DiGress (noise model + decoding).
+
+Add in the same file:
+
+```
+class MyDatasetInfos:
+    def __init__(self, datamodule):
+        self.name = "my_dataset"
+
+        # ---- REQUIRED ----
+        self.num_node_types = datamodule.num_node_types
+        self.num_edge_types = datamodule.num_edge_types
+
+        # ---- FOR MOLECULES ONLY ----
+        self.atom_encoder = {'C': 0, 'O': 1, 'N': 2}
+        self.atom_decoder = {v: k for k, v in self.atom_encoder.items()}
+
+        self.atomic_weights = {
+            0: 12.0,  # C
+            1: 16.0,  # O
+            2: 14.0   # N
+        }
+
+        self.valencies = {
+            0: 4,
+            1: 2,
+            2: 3
+        }
+```
+If your dataset is not molecular, you can skip:
+```
+atom_encoder
+atomic_weights
+valencies
+```
+and just define:
+```
+self.num_node_types
+self.num_edge_types
+```
+
+### 5. Compute dataset statistics automatically
+DiGress already provides helpers via `AbstractDataModule`.
+
+So you don’t manually compute:
+
+- node count distribution
+- edge type distribution
+
+Just ensure your Data objects have:
+```
+x → node features (one-hot or categorical)
+edge_attr → edge types (if applicable)
+```
+
+### 6. Register your dataset in the DataModule
+Find where datasets are loaded (usually something like):
+```
+src/datasets/abstract_dataset.py
+or
+src/data/
+```
+
+Add your dataset:
+
+```
+from src.datasets.my_dataset import MyDataset, MyDatasetInfos
+```
+
+Then extend the logic:
+```
+if cfg.dataset.name == "my_dataset":
+    dataset = MyDataset(root='data/my_dataset')
+    dataset_infos = MyDatasetInfos(self)
+```
+
+### 7. Add a config file
+
+Create:
+```
+configs/dataset/my_dataset.yaml
+```
+Example:
+```
+name: my_dataset
+
+datadir: data/my_dataset
+
+batch_size: 32
+num_workers: 4
+
+# graph sizes
+max_n_nodes: 50
+
+# feature sizes (important!)
+num_node_types: 5
+num_edge_types: 3
+```
+
+### 8. Modify `main.py`
+
+Locate where dataset config is parsed.
+
+Add your dataset option if needed:
+```
+if cfg.dataset.name == "my_dataset":
+    ...
+```
+
+### 9. Run preprocessing
+
+The first run will trigger PyG processing:
+
+```python main.py dataset=my_dataset```
+
+You should see:
+
+```
+Processing...
+Done!
+```
+
 
 ## Cite the paper
 
