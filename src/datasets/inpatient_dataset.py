@@ -10,12 +10,35 @@ from src.datasets.abstract_dataset import AbstractDataModule, AbstractDatasetInf
 
 
 class InpatientGraphDataset(InMemoryDataset):
-    FILE_PATTERN = r"^penn_inpatient_pavilion_subgraph_(\d+)\.json$"
-    EXPECTED_FILE_COUNT = 6
+    FILE_PATTERNS = (
+        r"^penn_inpatient_pavilion_subgraph_(\d+)\.json$",
+        r"^subgraph_(\d+)\.json$",
+    )
+    TRAIN_SPLIT_RATIO = 0.8
+    VAL_SPLIT_RATIO = 0.1
+    SPLIT_SEED = 0
 
-    def __init__(self, dataset_name, split, root, transform=None, pre_transform=None, pre_filter=None):
+    def __init__(
+        self,
+        dataset_name,
+        split,
+        root,
+        transform=None,
+        pre_transform=None,
+        pre_filter=None,
+        train_split_ratio=None,
+        val_split_ratio=None,
+        split_seed=None,
+    ):
         self.dataset_name = dataset_name
         self.split = split
+        self.train_split_ratio = (
+            self.TRAIN_SPLIT_RATIO if train_split_ratio is None else float(train_split_ratio)
+        )
+        self.val_split_ratio = (
+            self.VAL_SPLIT_RATIO if val_split_ratio is None else float(val_split_ratio)
+        )
+        self.split_seed = self.SPLIT_SEED if split_seed is None else int(split_seed)
         super().__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -27,17 +50,64 @@ class InpatientGraphDataset(InMemoryDataset):
     def processed_file_names(self):
             return [self.split + '.pt']
 
+    @classmethod
+    def _extract_file_index(cls, filename):
+        for pattern in cls.FILE_PATTERNS:
+            match = re.match(pattern, filename)
+            if match:
+                return int(match.group(1))
+
+        # Generic fallback: accept any JSON file that ends with a numeric suffix.
+        generic_match = re.search(r"(\d+)(?=\.json$)", filename)
+        if filename.endswith(".json") and generic_match:
+            return int(generic_match.group(1))
+
+        return None
+
+    def _compute_split_sizes(self, num_graphs):
+        if num_graphs < 3:
+            raise RuntimeError(
+                f"Need at least 3 inpatient raw graphs for train/val/test split, found {num_graphs}."
+            )
+
+        train_size = max(1, int(num_graphs * self.train_split_ratio))
+        val_size = max(1, int(num_graphs * self.val_split_ratio))
+
+        # Keep at least one test sample.
+        max_train_val = num_graphs - 1
+        overflow = train_size + val_size - max_train_val
+        if overflow > 0:
+            reducible_train = max(0, train_size - 1)
+            reduce_train = min(overflow, reducible_train)
+            train_size -= reduce_train
+            overflow -= reduce_train
+
+        if overflow > 0:
+            reducible_val = max(0, val_size - 1)
+            reduce_val = min(overflow, reducible_val)
+            val_size -= reduce_val
+            overflow -= reduce_val
+
+        test_size = num_graphs - train_size - val_size
+        if test_size < 1:
+            raise RuntimeError(
+                f"Invalid inpatient split sizes for {num_graphs} graphs: "
+                f"train={train_size}, val={val_size}, test={test_size}."
+            )
+
+        return train_size, val_size, test_size
+
     def download(self):
         json_paths = []
         for filename in os.listdir(self.raw_dir):
-            match = re.match(self.FILE_PATTERN, filename)
-            if match:
-                json_paths.append((int(match.group(1)), os.path.join(self.raw_dir, filename)))
+            index = self._extract_file_index(filename)
+            if index is not None:
+                json_paths.append((index, os.path.join(self.raw_dir, filename)))
         json_paths.sort(key=lambda x: x[0])
 
-        if len(json_paths) != self.EXPECTED_FILE_COUNT:
+        if len(json_paths) < 3:
             raise RuntimeError(
-                f"Expected {self.EXPECTED_FILE_COUNT} inpatient raw files in {self.raw_dir}, "
+                f"Expected at least 3 inpatient raw JSON files in {self.raw_dir}, "
                 f"found {len(json_paths)}."
             )
 
@@ -53,12 +123,26 @@ class InpatientGraphDataset(InMemoryDataset):
             parsed_graphs.append({"nodes": nodes, "links": links})
 
         node_type_names = sorted(all_types)
+        num_graphs = len(parsed_graphs)
+        train_size, val_size, test_size = self._compute_split_sizes(num_graphs)
+
+        generator = torch.Generator()
+        generator.manual_seed(self.split_seed)
+        shuffled_indices = torch.randperm(num_graphs, generator=generator).tolist()
+
+        train_indices = shuffled_indices[:train_size]
+        val_indices = shuffled_indices[train_size:train_size + val_size]
+        test_indices = shuffled_indices[train_size + val_size:]
 
         split_payloads = {
-            "train": {"node_type_names": node_type_names, "graphs": parsed_graphs[:2]},
-            "val": {"node_type_names": node_type_names, "graphs": parsed_graphs[2:4]},
-            "test": {"node_type_names": node_type_names, "graphs": parsed_graphs[4:6]},
+            "train": {"node_type_names": node_type_names, "graphs": [parsed_graphs[i] for i in train_indices]},
+            "val": {"node_type_names": node_type_names, "graphs": [parsed_graphs[i] for i in val_indices]},
+            "test": {"node_type_names": node_type_names, "graphs": [parsed_graphs[i] for i in test_indices]},
         }
+        print(
+            f"Inpatient split sizes: train={train_size}, val={val_size}, test={test_size} "
+            f"(total={num_graphs}, seed={self.split_seed})"
+        )
 
         torch.save(split_payloads["train"], self.raw_paths[0])
         torch.save(split_payloads["val"], self.raw_paths[1])
@@ -121,16 +205,21 @@ class InpatientGraphDataModule(AbstractDataModule):
     def __init__(self, cfg):
         self.cfg = cfg
         self.datadir = cfg.dataset.datadir
+        split_kwargs = {
+            "train_split_ratio": getattr(cfg.dataset, "train_split_ratio", InpatientGraphDataset.TRAIN_SPLIT_RATIO),
+            "val_split_ratio": getattr(cfg.dataset, "val_split_ratio", InpatientGraphDataset.VAL_SPLIT_RATIO),
+            "split_seed": getattr(cfg.dataset, "split_seed", InpatientGraphDataset.SPLIT_SEED),
+        }
         base_path = pathlib.Path(os.path.realpath(__file__)).parents[2]
         root_path = os.path.join(base_path, self.datadir)
 
 
         datasets = {'train': InpatientGraphDataset(dataset_name=self.cfg.dataset.name,
-                                                 split='train', root=root_path),
+                                                 split='train', root=root_path, **split_kwargs),
                     'val': InpatientGraphDataset(dataset_name=self.cfg.dataset.name,
-                                        split='val', root=root_path),
+                                        split='val', root=root_path, **split_kwargs),
                     'test': InpatientGraphDataset(dataset_name=self.cfg.dataset.name,
-                                        split='test', root=root_path)}
+                                        split='test', root=root_path, **split_kwargs)}
         # print(f'Dataset sizes: train {train_len}, val {val_len}, test {test_len}')
 
         super().__init__(cfg, datasets)
