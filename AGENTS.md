@@ -44,10 +44,16 @@ This file is the working guide for future coding agents in this repo.
 ## Dataset Notes
 - Molecular: `qm9`, `guacamol`, `moses` use RDKit parsing and molecular metrics.
 - Non-molecular: `sbm`, `comm20`, `planar`, `inpatient` use SPECTRE-style metrics.
-- Inpatient loader (`src/datasets/inpatient_dataset.py`) currently expects:
-  - filename regex: `^penn_inpatient_pavilion_subgraph_(\d+)\.json$`
-  - exact count: `6` raw files
-- Current repo data at `data/inpatient/raw` is `subgraph_*.json` with many files, so this loader will raise unless code or filenames are adjusted.
+- Inpatient loader (`src/datasets/inpatient_dataset.py`) now supports larger datasets and splits dynamically.
+- Accepted raw filenames include:
+  - `penn_inpatient_pavilion_subgraph_<n>.json`
+  - `subgraph_<n>.json`
+  - any `.json` with a numeric suffix (fallback)
+- Split policy is deterministic and configurable through `configs/dataset/inpatient.yaml`:
+  - `train_split_ratio` (default `0.8`)
+  - `val_split_ratio` (default `0.1`)
+  - `split_seed` (default `0`)
+- At least 3 raw graphs are required to produce non-empty train/val/test splits.
 
 ## Logging And Checkpoint Behavior
 - W&B is manually initialized via `utils.setup_wandb`; Lightning logger is disabled (`logger=[]`).

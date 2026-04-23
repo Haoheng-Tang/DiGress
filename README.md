@@ -47,7 +47,7 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
   - Clone via HTTPS
 
     ```cd /workspace/projects```
-    ```git clone https://github.com/cvignac/DiGress.git```
+    ```git clone https://github.com/Haoheng-Tang/DiGress.git```
     `cd DiGress`
 
   - Relink your existing installation after restart/migration:
