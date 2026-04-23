@@ -68,7 +68,7 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
     ```conda install -c conda-forge graph-tool=2.45```
   - Check that this line does not return an error:
     
-    ```python3 -c 'import graph_tool as gt' ```
+    ```python3 -c 'import graph_tool as gt'```
 
   - Uninstall the current pytorch: 
     
@@ -91,7 +91,7 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
     
     ```pip install -e .```
 
-  - Navigate to the ./src/analysis/orca directory and compile orca.cpp: 
+  - Navigate to the `./src/analysis/orca` directory and compile `orca.cpp`: 
     
      ```g++ -O2 -std=c++11 -o orca orca.cpp```
 
@@ -131,13 +131,13 @@ Note: graph_tool and torch_geometric currently seem to conflict on MacOS, I have
 
 ## Run the code
   
-  - All code is currently launched through `python3 main.py`. Check hydra documentation (https://hydra.cc/) for overriding default parameters.
+  - All code is currently launched through `python3 src/main.py`. Check hydra documentation (https://hydra.cc/) for overriding default parameters.
   - To run the debugging code: `python3 src/main.py +experiment=debug.yaml`. We advise to try to run the debug mode first
     before launching full experiments.
-  - To run a code on only a few batches: `python3 main.py general.name=test`.
-  - To run the continuous model: `python3 main.py model=continuous`
-  - To run the discrete model: `python3 main.py`
-  - You can specify the dataset with `python3 main.py dataset=guacamol`. Look at `configs/dataset` for the list
+  - To run a code on only a few batches: `python3 src/main.py general.name=test`.
+  - To run the continuous model: `python3 src/main.py model=continuous`
+  - To run the discrete model: `python3 src/main.py`
+  - You can specify the dataset with `python3 src/main.py dataset=guacamol`. Look at `configs/dataset` for the list
 of datasets that are currently available
     
 ## Checkpoints
@@ -376,7 +376,7 @@ if cfg.dataset.name == "my_dataset":
 
 The first run will trigger PyG processing:
 
-```python main.py dataset=my_dataset```
+```python3 src/main.py dataset=my_dataset```
 
 You should see:
 
@@ -384,6 +384,12 @@ You should see:
 Processing...
 Done!
 ```
+
+### 10. Train on your dataset
+
+You can specify the number of epoches and the batch size of training from command line (Hydra). For example:
+
+```python3 src/main.py dataset=inpatient train.n_epochs=200 train.batch_size=128 general.wandb=disabled```
 
 
 ## Cite the paper

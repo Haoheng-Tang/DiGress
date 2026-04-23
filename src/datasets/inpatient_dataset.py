@@ -164,6 +164,7 @@ class InpatientGraphDataset(InMemoryDataset):
                 continue
 
             node_id_to_idx = {str(node["id"]): idx for idx, node in enumerate(nodes)}
+            # Predict node's feature: 'name'
             node_type_ids = torch.tensor(
                 [node_type_to_idx.get(node.get("name", "unknown"), 0) for node in nodes],
                 dtype=torch.long
