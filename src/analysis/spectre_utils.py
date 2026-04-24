@@ -3,7 +3,6 @@
 # Adapted from https://github.com/lrjconan/GRAN/ which in turn is adapted from https://github.com/JiaxuanYou/graph-generation
 #
 ###############################################################################
-import graph_tool.all as gt
 ##Navigate to the ./util/orca directory and compile orca.cpp
 # g++ -O2 -std=c++11 -o orca orca.cpp
 import os
@@ -605,34 +604,74 @@ def is_grid_graph(G):
         return False
 
 
+def _infer_sbm_blocks(G):
+    """
+    Infer a community assignment for SBM-style validation using networkx-only methods.
+    """
+    if G.number_of_nodes() == 0:
+        raise ValueError("Cannot infer communities on an empty graph.")
+
+    try:
+        communities = nx.community.louvain_communities(G, seed=0)
+    except Exception:
+        communities = list(nx.community.greedy_modularity_communities(G))
+
+    if len(communities) == 0:
+        raise ValueError("Community detection returned no communities.")
+
+    node_to_block = {}
+    for block_id, community_nodes in enumerate(communities):
+        for node in community_nodes:
+            node_to_block[node] = block_id
+
+    # Some algorithms can leave isolated nodes unassigned in edge cases.
+    # Assign each missing node to its own singleton block to keep indexing contiguous.
+    for node in G.nodes():
+        if node not in node_to_block:
+            node_to_block[node] = len(communities)
+            communities.append({node})
+
+    return node_to_block, len(communities)
+
+
+def _compute_sbm_block_stats(adj, nodelist, node_to_block, n_blocks):
+    block_ids = np.array([node_to_block[node] for node in nodelist], dtype=np.int64)
+    node_counts = np.bincount(block_ids, minlength=n_blocks).astype(np.float64)
+
+    edge_counts = np.zeros((n_blocks, n_blocks), dtype=np.float64)
+    for i in range(n_blocks):
+        row_selector = block_ids == i
+        if not row_selector.any():
+            continue
+        for j in range(n_blocks):
+            col_selector = block_ids == j
+            if not col_selector.any():
+                continue
+            edge_counts[i, j] = adj[np.ix_(row_selector, col_selector)].sum()
+
+    return node_counts, edge_counts
+
+
 def is_sbm_graph(G, p_intra=0.3, p_inter=0.005, strict=True, refinement_steps=1000):
     """
     Check if how closely given graph matches a SBM with given probabilites by computing mean probability of Wald test statistic for each recovered parameter
     """
 
-    adj = nx.adjacency_matrix(G).toarray()
-    idx = adj.nonzero()
-    g = gt.Graph()
-    g.add_edge_list(np.transpose(idx))
+    nodelist = list(G.nodes())
+    adj = nx.to_numpy_array(G, nodelist=nodelist, dtype=np.float64)
+    np.fill_diagonal(adj, 0.0)
     try:
-        state = gt.minimize_blockmodel_dl(g)
+        node_to_block, n_blocks = _infer_sbm_blocks(G)
     except ValueError:
         if strict:
             return False
         else:
             return 0.0
 
-    # Refine using merge-split MCMC
-    for i in range(refinement_steps):
-        state.multiflip_mcmc_sweep(beta=np.inf, niter=10)
+    # Keep the parameter for backward compatibility with previous callers.
+    _ = refinement_steps
 
-    b = state.get_blocks()
-    b = gt.contiguous_map(state.get_blocks())
-    state = state.copy(b=b)
-    e = state.get_matrix()
-    n_blocks = state.get_nonempty_B()
-    node_counts = state.get_nr().get_array()[:n_blocks]
-    edge_counts = e.todense()[:n_blocks, :n_blocks]
+    node_counts, edge_counts = _compute_sbm_block_stats(adj, nodelist, node_to_block, n_blocks)
     if strict:
         if (node_counts > 40).sum() > 0 or (node_counts < 20).sum() > 0 or n_blocks > 5 or n_blocks < 2:
             return False

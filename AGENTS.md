@@ -74,7 +74,7 @@ This file is the working guide for future coding agents in this repo.
 
 ## Known Gotchas
 - README commands mention `python main.py`; in this repo use `python src/main.py`.
-- `graph_tool` and `torch_geometric` compatibility can be environment-sensitive.
+- `torch_geometric` compatibility can be environment-sensitive.
 - `TrainLossDiscrete.log_epoch_metrics` references `self.train_y_loss` (likely typo); it is usually masked by `y` having zero dims.
 - `src/datasets/spectre_dataset.py` appends each `data` object twice in `process()`; verify intent before changing.
 

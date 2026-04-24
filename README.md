@@ -63,13 +63,6 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
   - Check that this line does not return an error:
     
     ``` python3 -c 'from rdkit import Chem' ```
-  - Install graph-tool (https://graph-tool.skewed.de/): 
-    
-    ```conda install -c conda-forge graph-tool=2.45```
-  - Check that this line does not return an error:
-    
-    ```python3 -c 'import graph_tool as gt'```
-
   - Uninstall the current pytorch: 
     
     ```pip uninstall torch torchvision torchaudio -y```
@@ -95,7 +88,7 @@ This code was tested with PyTorch 2.0.1, cuda 11.8 and torch_geometrics 2.3.1
     
      ```g++ -O2 -std=c++11 -o orca orca.cpp```
 
-Note: graph_tool and torch_geometric currently seem to conflict on MacOS, I have not solved this issue yet.
+Note: non-molecular sampling metrics now use Python-only community detection, so no extra platform-specific graph library is required.
 
 ### Git Commit
 
@@ -389,7 +382,7 @@ Done!
 
 You can specify the number of epoches and the batch size of training from command line (Hydra). For example:
 
-```python3 src/main.py dataset=inpatient train.n_epochs=200 train.batch_size=128 general.wandb=disabled```
+```python3 src/main.py dataset=inpatient train.n_epochs=200 train.batch_size=128 general.wandb=disabled general.gpus=0```
 
 
 ## Cite the paper
